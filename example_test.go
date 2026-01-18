@@ -117,16 +117,17 @@ func ExampleLogger_Logs() {
 }
 
 func ExampleHiddenValue() {
+	const hideField = "password"
 	logger := audit.New()
 
 	logger.Create("user:1", "admin", "User created", map[string]audit.Value{
-		"email":    audit.PlainValue("user@example.com"),
-		"password": audit.HiddenValue(),
+		"email":   audit.PlainValue("user@example.com"),
+		hideField: audit.HiddenValue(),
 	})
 
 	changes := logger.Logs("user:1")
 	for _, field := range changes[0].Fields {
-		if field.Field == "password" {
+		if field.Field == hideField {
 			fmt.Printf("%s: %v -> %v\n", field.Field, field.From, field.To)
 		}
 	}
@@ -145,22 +146,6 @@ func ExamplePlainValue() {
 	events := logger.Events("config:1")
 	fmt.Printf("Logged %d event(s)\n", len(events))
 	// Output: Logged 1 event(s)
-}
-
-func ExampleNewWithStorage() {
-	// Create a custom storage implementation
-	storage := audit.NewInMemoryStorage()
-
-	// Create logger with custom storage using options pattern
-	logger := audit.New(audit.WithStorage(storage))
-
-	logger.Create("test:1", "user", "Test event", map[string]audit.Value{
-		"field": audit.PlainValue("value"),
-	})
-
-	events := logger.Events("test:1")
-	fmt.Printf("Events: %d\n", len(events))
-	// Output: Events: 1
 }
 
 func ExampleWithStorage() {

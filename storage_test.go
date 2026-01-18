@@ -1,31 +1,23 @@
-package audit
+package audit_test
 
 import (
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/w0rng/audit"
 )
 
-func TestNewInMemoryStorage(t *testing.T) {
-	storage := NewInMemoryStorage()
-	if storage == nil {
-		t.Fatal("NewInMemoryStorage() returned nil")
-	}
-	if storage.events == nil {
-		t.Fatal("storage.events is nil")
-	}
-}
-
 func TestInMemoryStorage_Store(t *testing.T) {
-	storage := NewInMemoryStorage()
-	event := Event{
+	storage := audit.NewInMemoryStorage()
+	event := audit.Event{
 		Timestamp:   time.Now(),
-		Action:      ActionCreate,
+		Action:      audit.ActionCreate,
 		Author:      "test",
 		Description: "Test event",
-		Payload: map[string]Value{
-			"field": PlainValue("value"),
+		Payload: map[string]audit.Value{
+			"field": audit.PlainValue("value"),
 		},
 	}
 
@@ -41,15 +33,15 @@ func TestInMemoryStorage_Store(t *testing.T) {
 }
 
 func TestInMemoryStorage_Store_MultipleEvents(t *testing.T) {
-	storage := NewInMemoryStorage()
+	storage := audit.NewInMemoryStorage()
 
 	for i := 0; i < 5; i++ {
-		event := Event{
+		event := audit.Event{
 			Timestamp:   time.Now(),
-			Action:      ActionCreate,
+			Action:      audit.ActionCreate,
 			Author:      fmt.Sprintf("user%d", i),
 			Description: "Test",
-			Payload:     map[string]Value{},
+			Payload:     map[string]audit.Value{},
 		}
 		storage.Store("key1", event)
 	}
@@ -61,13 +53,13 @@ func TestInMemoryStorage_Store_MultipleEvents(t *testing.T) {
 }
 
 func TestInMemoryStorage_Get(t *testing.T) {
-	storage := NewInMemoryStorage()
-	event := Event{
+	storage := audit.NewInMemoryStorage()
+	event := audit.Event{
 		Timestamp:   time.Now(),
-		Action:      ActionCreate,
+		Action:      audit.ActionCreate,
 		Author:      "test",
 		Description: "Test",
-		Payload:     map[string]Value{},
+		Payload:     map[string]audit.Value{},
 	}
 
 	storage.Store("key1", event)
@@ -95,13 +87,13 @@ func TestInMemoryStorage_Get(t *testing.T) {
 }
 
 func TestInMemoryStorage_Has(t *testing.T) {
-	storage := NewInMemoryStorage()
-	event := Event{
+	storage := audit.NewInMemoryStorage()
+	event := audit.Event{
 		Timestamp:   time.Now(),
-		Action:      ActionCreate,
+		Action:      audit.ActionCreate,
 		Author:      "test",
 		Description: "Test",
-		Payload:     map[string]Value{},
+		Payload:     map[string]audit.Value{},
 	}
 
 	storage.Store("key1", event)
@@ -126,13 +118,13 @@ func TestInMemoryStorage_Has(t *testing.T) {
 }
 
 func TestInMemoryStorage_Clear(t *testing.T) {
-	storage := NewInMemoryStorage()
-	event := Event{
+	storage := audit.NewInMemoryStorage()
+	event := audit.Event{
 		Timestamp:   time.Now(),
-		Action:      ActionCreate,
+		Action:      audit.ActionCreate,
 		Author:      "test",
 		Description: "Test",
-		Payload:     map[string]Value{},
+		Payload:     map[string]audit.Value{},
 	}
 
 	storage.Store("key1", event)
@@ -153,13 +145,13 @@ func TestInMemoryStorage_Clear(t *testing.T) {
 }
 
 func TestInMemoryStorage_Clear_NonExistent(t *testing.T) {
-	storage := NewInMemoryStorage()
+	storage := audit.NewInMemoryStorage()
 	// Should not panic when clearing non-existent key
 	storage.Clear("nonexistent")
 }
 
 func TestInMemoryStorage_Concurrency(t *testing.T) {
-	storage := NewInMemoryStorage()
+	storage := audit.NewInMemoryStorage()
 	const goroutines = 100
 	const eventsPerGoroutine = 10
 
@@ -170,13 +162,13 @@ func TestInMemoryStorage_Concurrency(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < eventsPerGoroutine; j++ {
-				event := Event{
+				event := audit.Event{
 					Timestamp:   time.Now(),
-					Action:      ActionCreate,
+					Action:      audit.ActionCreate,
 					Author:      fmt.Sprintf("user%d", id),
 					Description: "Concurrent test",
-					Payload: map[string]Value{
-						"value": PlainValue(j),
+					Payload: map[string]audit.Value{
+						"value": audit.PlainValue(j),
 					},
 				}
 				storage.Store(fmt.Sprintf("key:%d", id), event)
@@ -203,7 +195,7 @@ func TestInMemoryStorage_Concurrency(t *testing.T) {
 }
 
 func TestInMemoryStorage_Concurrency_ReadWrite(t *testing.T) {
-	storage := NewInMemoryStorage()
+	storage := audit.NewInMemoryStorage()
 	const duration = 100 * time.Millisecond
 
 	done := make(chan bool, 3)
@@ -213,13 +205,13 @@ func TestInMemoryStorage_Concurrency_ReadWrite(t *testing.T) {
 		start := time.Now()
 		counter := 0
 		for time.Since(start) < duration {
-			event := Event{
+			event := audit.Event{
 				Timestamp:   time.Now(),
-				Action:      ActionCreate,
+				Action:      audit.ActionCreate,
 				Author:      "writer",
 				Description: "Write",
-				Payload: map[string]Value{
-					"count": PlainValue(counter),
+				Payload: map[string]audit.Value{
+					"count": audit.PlainValue(counter),
 				},
 			}
 			storage.Store("shared-key", event)
@@ -261,31 +253,31 @@ func TestInMemoryStorage_Concurrency_ReadWrite(t *testing.T) {
 
 func TestStorageInterface(t *testing.T) {
 	// Verify that InMemoryStorage implements Storage interface
-	var _ Storage = (*InMemoryStorage)(nil)
+	var _ audit.Storage = (*audit.InMemoryStorage)(nil)
 }
 
-// mockStorage is a simple mock implementation for testing
+// mockStorage is a simple mock implementation for testing.
 type mockStorage struct {
 	mu     sync.RWMutex
-	stored map[string][]Event
+	stored map[string][]audit.Event
 	calls  map[string]int
 }
 
 func newMockStorage() *mockStorage {
 	return &mockStorage{
-		stored: make(map[string][]Event),
+		stored: make(map[string][]audit.Event),
 		calls:  make(map[string]int),
 	}
 }
 
-func (m *mockStorage) Store(key string, event Event) {
+func (m *mockStorage) Store(key string, event audit.Event) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.stored[key] = append(m.stored[key], event)
 	m.calls["Store"]++
 }
 
-func (m *mockStorage) Get(key string) []Event {
+func (m *mockStorage) Get(key string) []audit.Event {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	m.calls["Get"]++
@@ -309,10 +301,10 @@ func (m *mockStorage) Clear(key string) {
 
 func TestLogger_WithMockStorage(t *testing.T) {
 	mock := newMockStorage()
-	logger := New(WithStorage(mock))
+	logger := audit.New(audit.WithStorage(mock))
 
-	logger.Create("test", "user", "Created", map[string]Value{
-		"field": PlainValue("value"),
+	logger.Create("test", "user", "Created", map[string]audit.Value{
+		"field": audit.PlainValue("value"),
 	})
 
 	if mock.calls["Store"] != 1 {

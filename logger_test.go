@@ -1,72 +1,13 @@
-package audit
+package audit_test
 
 import (
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/w0rng/audit"
 )
-
-func TestNew(t *testing.T) {
-	logger := New()
-	if logger == nil {
-		t.Fatal("New() returned nil")
-	}
-	if logger.storage == nil {
-		t.Fatal("Logger storage is nil")
-	}
-}
-
-func TestNewWithStorage(t *testing.T) {
-	storage := NewInMemoryStorage()
-	logger := NewWithStorage(storage)
-	if logger == nil {
-		t.Fatal("NewWithStorage() returned nil")
-	}
-	if logger.storage != storage {
-		t.Error("Logger storage does not match provided storage")
-	}
-}
-
-func TestNew_WithOptions(t *testing.T) {
-	storage := NewInMemoryStorage()
-	logger := New(WithStorage(storage))
-	if logger == nil {
-		t.Fatal("New(WithStorage()) returned nil")
-	}
-	if logger.storage != storage {
-		t.Error("Logger storage does not match provided storage")
-	}
-}
-
-func TestNew_DefaultStorage(t *testing.T) {
-	logger := New()
-	if logger == nil {
-		t.Fatal("New() returned nil")
-	}
-	if logger.storage == nil {
-		t.Fatal("Logger storage is nil")
-	}
-	// Should be InMemoryStorage by default
-	if _, ok := logger.storage.(*InMemoryStorage); !ok {
-		t.Error("Default storage should be InMemoryStorage")
-	}
-}
-
-func TestWithStorage_Option(t *testing.T) {
-	customStorage := NewInMemoryStorage()
-	opt := WithStorage(customStorage)
-
-	logger := &Logger{
-		storage: NewInMemoryStorage(),
-	}
-
-	opt(logger)
-
-	if logger.storage != customStorage {
-		t.Error("WithStorage option did not set storage correctly")
-	}
-}
 
 func TestLogger_Create(t *testing.T) {
 	tests := []struct {
@@ -74,44 +15,44 @@ func TestLogger_Create(t *testing.T) {
 		key         string
 		author      string
 		description string
-		payload     map[string]Value
-		wantAction  Action
+		payload     map[string]audit.Value
+		wantAction  audit.Action
 	}{
 		{
 			name:        "create with plain values",
 			key:         "user:1",
 			author:      "admin",
 			description: "User created",
-			payload: map[string]Value{
-				"email": PlainValue("user@example.com"),
-				"role":  PlainValue("admin"),
+			payload: map[string]audit.Value{
+				"email": audit.PlainValue("user@example.com"),
+				"role":  audit.PlainValue("admin"),
 			},
-			wantAction: ActionCreate,
+			wantAction: audit.ActionCreate,
 		},
 		{
 			name:        "create with hidden value",
 			key:         "user:2",
 			author:      "system",
 			description: "User registered",
-			payload: map[string]Value{
-				"email":    PlainValue("test@example.com"),
-				"password": HiddenValue(),
+			payload: map[string]audit.Value{
+				"email":    audit.PlainValue("test@example.com"),
+				"password": audit.HiddenValue(),
 			},
-			wantAction: ActionCreate,
+			wantAction: audit.ActionCreate,
 		},
 		{
 			name:        "create with empty payload",
 			key:         "user:3",
 			author:      "admin",
 			description: "User initialized",
-			payload:     map[string]Value{},
-			wantAction:  ActionCreate,
+			payload:     map[string]audit.Value{},
+			wantAction:  audit.ActionCreate,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logger := New()
+			logger := audit.New()
 			logger.Create(tt.key, tt.author, tt.description, tt.payload)
 
 			events := logger.Events(tt.key)
@@ -137,47 +78,47 @@ func TestLogger_Create(t *testing.T) {
 }
 
 func TestLogger_Update(t *testing.T) {
-	logger := New()
-	logger.Create("order:1", "user", "Created", map[string]Value{
-		"status": PlainValue("pending"),
+	logger := audit.New()
+	logger.Create("order:1", "user", "Created", map[string]audit.Value{
+		"status": audit.PlainValue("pending"),
 	})
-	logger.Update("order:1", "user", "Updated", map[string]Value{
-		"status": PlainValue("approved"),
+	logger.Update("order:1", "user", "Updated", map[string]audit.Value{
+		"status": audit.PlainValue("approved"),
 	})
 
 	events := logger.Events("order:1")
 	if len(events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
-	if events[1].Action != ActionUpdate {
-		t.Errorf("expected action %v, got %v", ActionUpdate, events[1].Action)
+	if events[1].Action != audit.ActionUpdate {
+		t.Errorf("expected action %v, got %v", audit.ActionUpdate, events[1].Action)
 	}
 }
 
 func TestLogger_Delete(t *testing.T) {
-	logger := New()
-	logger.Create("item:1", "user", "Created", map[string]Value{
-		"name": PlainValue("test"),
+	logger := audit.New()
+	logger.Create("item:1", "user", "Created", map[string]audit.Value{
+		"name": audit.PlainValue("test"),
 	})
-	logger.Delete("item:1", "admin", "Deleted", map[string]Value{})
+	logger.Delete("item:1", "admin", "Deleted", map[string]audit.Value{})
 
 	events := logger.Events("item:1")
 	if len(events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(events))
 	}
-	if events[1].Action != ActionDelete {
-		t.Errorf("expected action %v, got %v", ActionDelete, events[1].Action)
+	if events[1].Action != audit.ActionDelete {
+		t.Errorf("expected action %v, got %v", audit.ActionDelete, events[1].Action)
 	}
 }
 
 func TestLogger_Events_NoFilter(t *testing.T) {
-	logger := New()
-	logger.Create("entity:1", "user", "Created", map[string]Value{
-		"field1": PlainValue("value1"),
-		"field2": PlainValue("value2"),
+	logger := audit.New()
+	logger.Create("entity:1", "user", "Created", map[string]audit.Value{
+		"field1": audit.PlainValue("value1"),
+		"field2": audit.PlainValue("value2"),
 	})
-	logger.Update("entity:1", "user", "Updated", map[string]Value{
-		"field1": PlainValue("new-value"),
+	logger.Update("entity:1", "user", "Updated", map[string]audit.Value{
+		"field1": audit.PlainValue("new-value"),
 	})
 
 	events := logger.Events("entity:1")
@@ -187,30 +128,30 @@ func TestLogger_Events_NoFilter(t *testing.T) {
 }
 
 func TestLogger_Events_Filtering(t *testing.T) {
-	logger := New()
-	logger.Create("entity:1", "user", "Created", map[string]Value{
-		"status": PlainValue("new"),
-		"email":  PlainValue("test@example.com"),
-		"token":  HiddenValue(),
+	logger := audit.New()
+	logger.Create("entity:1", "user", "Created", map[string]audit.Value{
+		"status": audit.PlainValue("new"),
+		"email":  audit.PlainValue("test@example.com"),
+		"token":  audit.HiddenValue(),
 	})
-	logger.Update("entity:1", "user", "Updated status", map[string]Value{
-		"status": PlainValue("active"),
+	logger.Update("entity:1", "user", "Updated status", map[string]audit.Value{
+		"status": audit.PlainValue("active"),
 	})
-	logger.Update("entity:1", "user", "Updated email", map[string]Value{
-		"email": PlainValue("new@example.com"),
+	logger.Update("entity:1", "user", "Updated email", map[string]audit.Value{
+		"email": audit.PlainValue("new@example.com"),
 	})
 
 	tests := []struct {
 		name         string
 		fields       []string
 		wantEvents   int
-		checkPayload func(t *testing.T, events []Event)
+		checkPayload func(t *testing.T, events []audit.Event)
 	}{
 		{
 			name:       "filter by status",
 			fields:     []string{"status"},
 			wantEvents: 2,
-			checkPayload: func(t *testing.T, events []Event) {
+			checkPayload: func(t *testing.T, events []audit.Event) {
 				for i, e := range events {
 					if _, ok := e.Payload["status"]; !ok {
 						t.Errorf("event %d missing status field", i)
@@ -228,7 +169,7 @@ func TestLogger_Events_Filtering(t *testing.T) {
 			name:       "filter by email",
 			fields:     []string{"email"},
 			wantEvents: 2,
-			checkPayload: func(t *testing.T, events []Event) {
+			checkPayload: func(t *testing.T, events []audit.Event) {
 				for _, e := range events {
 					if _, ok := e.Payload["email"]; !ok {
 						t.Error("event missing email field")
@@ -240,7 +181,7 @@ func TestLogger_Events_Filtering(t *testing.T) {
 			name:       "filter by token",
 			fields:     []string{"token"},
 			wantEvents: 1,
-			checkPayload: func(t *testing.T, events []Event) {
+			checkPayload: func(t *testing.T, events []audit.Event) {
 				if _, ok := events[0].Payload["token"]; !ok {
 					t.Error("event missing token field")
 				}
@@ -272,7 +213,7 @@ func TestLogger_Events_Filtering(t *testing.T) {
 }
 
 func TestLogger_Events_NonExistentKey(t *testing.T) {
-	logger := New()
+	logger := audit.New()
 	events := logger.Events("nonexistent")
 	if events == nil {
 		t.Error("Events() should not return nil")
@@ -283,19 +224,19 @@ func TestLogger_Events_NonExistentKey(t *testing.T) {
 }
 
 func TestLogger_Logs(t *testing.T) {
-	logger := New()
+	logger := audit.New()
 
-	logger.Create("item:1", "alice", "Created", map[string]Value{
-		"color": PlainValue("red"),
-		"size":  PlainValue("large"),
+	logger.Create("item:1", "alice", "Created", map[string]audit.Value{
+		"color": audit.PlainValue("red"),
+		"size":  audit.PlainValue("large"),
 	})
 
-	logger.Update("item:1", "bob", "Updated color", map[string]Value{
-		"color": PlainValue("blue"),
+	logger.Update("item:1", "bob", "Updated color", map[string]audit.Value{
+		"color": audit.PlainValue("blue"),
 	})
 
-	logger.Update("item:1", "alice", "Updated size", map[string]Value{
-		"size": PlainValue("small"),
+	logger.Update("item:1", "alice", "Updated size", map[string]audit.Value{
+		"size": audit.PlainValue("small"),
 	})
 
 	changes := logger.Logs("item:1")
@@ -331,15 +272,16 @@ func TestLogger_Logs(t *testing.T) {
 }
 
 func TestLogger_HiddenValues(t *testing.T) {
-	logger := New()
+	logger := audit.New()
+	const hideField = "password"
 
-	logger.Create("user:1", "admin", "User created", map[string]Value{
-		"email":    PlainValue("user@example.com"),
-		"password": HiddenValue(),
+	logger.Create("user:1", "admin", "User created", map[string]audit.Value{
+		"email":   audit.PlainValue("user@example.com"),
+		hideField: audit.HiddenValue(),
 	})
 
-	logger.Update("user:1", "admin", "Password updated", map[string]Value{
-		"password": HiddenValue(),
+	logger.Update("user:1", "admin", "Password updated", map[string]audit.Value{
+		hideField: audit.HiddenValue(),
 	})
 
 	changes := logger.Logs("user:1")
@@ -349,11 +291,11 @@ func TestLogger_HiddenValues(t *testing.T) {
 
 	// Check first change - password should be masked
 	passwordField := changes[0].Fields[1] // Assuming password is second field
-	if passwordField.Field == "password" {
-		if passwordField.From != "***" {
+	if passwordField.Field == hideField {
+		if passwordField.From != audit.HideText {
 			t.Errorf("expected hidden from value '***', got %v", passwordField.From)
 		}
-		if passwordField.To != "***" {
+		if passwordField.To != audit.HideText {
 			t.Errorf("expected hidden to value '***', got %v", passwordField.To)
 		}
 	}
@@ -363,19 +305,19 @@ func TestLogger_HiddenValues(t *testing.T) {
 		t.Fatal("expected at least 1 field change in second change")
 	}
 	passwordUpdate := changes[1].Fields[0]
-	if passwordUpdate.Field != "password" {
+	if passwordUpdate.Field != hideField {
 		t.Errorf("expected field 'password', got %s", passwordUpdate.Field)
 	}
-	if passwordUpdate.From != "***" {
+	if passwordUpdate.From != audit.HideText {
 		t.Errorf("expected hidden from value '***', got %v", passwordUpdate.From)
 	}
-	if passwordUpdate.To != "***" {
+	if passwordUpdate.To != audit.HideText {
 		t.Errorf("expected hidden to value '***', got %v", passwordUpdate.To)
 	}
 }
 
 func TestLogger_Concurrency(t *testing.T) {
-	logger := New()
+	logger := audit.New()
 	const goroutines = 100
 	const eventsPerGoroutine = 10
 
@@ -390,8 +332,8 @@ func TestLogger_Concurrency(t *testing.T) {
 					fmt.Sprintf("key:%d", id),
 					fmt.Sprintf("user:%d", id),
 					"Concurrent create",
-					map[string]Value{
-						"value": PlainValue(j),
+					map[string]audit.Value{
+						"value": audit.PlainValue(j),
 					},
 				)
 			}
@@ -417,7 +359,7 @@ func TestLogger_Concurrency(t *testing.T) {
 }
 
 func TestLogger_Concurrency_ReadWrite(t *testing.T) {
-	logger := New()
+	logger := audit.New()
 	const duration = 100 * time.Millisecond
 
 	done := make(chan bool)
@@ -427,8 +369,8 @@ func TestLogger_Concurrency_ReadWrite(t *testing.T) {
 		start := time.Now()
 		counter := 0
 		for time.Since(start) < duration {
-			logger.Create("shared-key", "writer", "Write", map[string]Value{
-				"count": PlainValue(counter),
+			logger.Create("shared-key", "writer", "Write", map[string]audit.Value{
+				"count": audit.PlainValue(counter),
 			})
 			counter++
 		}
@@ -473,7 +415,7 @@ func TestPlainValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := PlainValue(tt.input)
+			v := audit.PlainValue(tt.input)
 			if v.Hidden {
 				t.Error("PlainValue should not be hidden")
 			}
@@ -489,7 +431,7 @@ func TestPlainValue(t *testing.T) {
 }
 
 func TestHiddenValue(t *testing.T) {
-	v := HiddenValue()
+	v := audit.HiddenValue()
 	if !v.Hidden {
 		t.Error("HiddenValue should be hidden")
 	}

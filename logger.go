@@ -29,6 +29,8 @@ const (
 	ActionCreate Action = "create"
 	ActionUpdate Action = "update"
 	ActionDelete Action = "delete"
+
+	HideText string = "***"
 )
 
 type Value struct {
@@ -92,12 +94,6 @@ func New(opts ...Option) *Logger {
 	return l
 }
 
-// NewWithStorage creates a Logger with a custom storage implementation.
-// Deprecated: Use New(WithStorage(storage)) instead.
-func NewWithStorage(storage Storage) *Logger {
-	return New(WithStorage(storage))
-}
-
 // HiddenValue creates a Value with Hidden=true to mask sensitive data in logs.
 // Hidden values are displayed as "***" to prevent exposure of passwords, tokens, etc.
 func HiddenValue() Value {
@@ -125,15 +121,15 @@ func (l *Logger) LogChange(key string, action Action, author, description string
 	l.storage.Store(key, event)
 }
 
-func (l *Logger) Create(key string, author, description string, payload map[string]Value) {
+func (l *Logger) Create(key, author, description string, payload map[string]Value) {
 	l.LogChange(key, ActionCreate, author, description, payload)
 }
 
-func (l *Logger) Update(key string, author, description string, payload map[string]Value) {
+func (l *Logger) Update(key, author, description string, payload map[string]Value) {
 	l.LogChange(key, ActionUpdate, author, description, payload)
 }
 
-func (l *Logger) Delete(key string, author, description string, payload map[string]Value) {
+func (l *Logger) Delete(key, author, description string, payload map[string]Value) {
 	l.LogChange(key, ActionDelete, author, description, payload)
 }
 
@@ -197,7 +193,7 @@ func (l *Logger) Events(key string, fields ...string) []Event {
 func (l *Logger) Logs(key string) []Change {
 	events := l.storage.Get(key)
 	state := make(map[string]any)
-	var result []Change
+	result := make([]Change, 0, len(events))
 
 	for _, e := range events {
 		change := Change{
@@ -211,8 +207,8 @@ func (l *Logger) Logs(key string) []Change {
 
 			from, to := old, val.Data
 			if val.Hidden {
-				from = "***"
-				to = "***"
+				from = HideText
+				to = HideText
 			}
 
 			if val.Hidden || old != val.Data {

@@ -1,4 +1,4 @@
-package slog
+package slog_test
 
 import (
 	"bytes"
@@ -7,22 +7,8 @@ import (
 	"testing"
 
 	"github.com/w0rng/audit"
+	auditslog "github.com/w0rng/audit/slog"
 )
-
-func TestNewHandler(t *testing.T) {
-	logger := audit.New()
-	opts := HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
-	}
-
-	handler := NewHandler(logger, opts)
-	if handler == nil {
-		t.Fatal("NewHandler returned nil")
-	}
-	if handler.logger != logger {
-		t.Error("Handler logger not set correctly")
-	}
-}
 
 func TestNewHandler_PanicsWithoutKeyExtractor(t *testing.T) {
 	defer func() {
@@ -32,13 +18,13 @@ func TestNewHandler_PanicsWithoutKeyExtractor(t *testing.T) {
 	}()
 
 	logger := audit.New()
-	NewHandler(logger, HandlerOptions{})
+	auditslog.NewHandler(logger, auditslog.HandlerOptions{})
 }
 
 func TestHandler_Handle_Basic(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	ctx := context.Background()
@@ -75,8 +61,8 @@ func TestHandler_Handle_Basic(t *testing.T) {
 
 func TestHandler_Handle_WithAction(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	ctx := context.Background()
@@ -103,9 +89,10 @@ func TestHandler_Handle_WithAction(t *testing.T) {
 
 func TestHandler_Handle_WithAuthor(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
+	const author = "admin"
 
 	ctx := context.Background()
 	record := slog.Record{
@@ -113,21 +100,21 @@ func TestHandler_Handle_WithAuthor(t *testing.T) {
 	}
 	record.AddAttrs(
 		slog.String("entity", "user:123"),
-		slog.String("author", "admin"),
+		slog.String("author", author),
 	)
 
 	handler.Handle(ctx, record)
 
 	events := logger.Events("user:123")
-	if events[0].Author != "admin" {
+	if events[0].Author != author {
 		t.Errorf("expected author 'admin', got %q", events[0].Author)
 	}
 }
 
 func TestHandler_Handle_ShouldAudit(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 		ShouldAudit: func(record slog.Record) bool {
 			// Only audit Info level and above
 			return record.Level >= slog.LevelInfo
@@ -166,8 +153,8 @@ func TestHandler_Handle_ShouldAudit(t *testing.T) {
 
 func TestHandler_Handle_NoEntityKey(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	ctx := context.Background()
@@ -190,8 +177,8 @@ func TestHandler_Handle_NoEntityKey(t *testing.T) {
 
 func TestHandler_WithAttrs(t *testing.T) {
 	logger := audit.New()
-	baseHandler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	baseHandler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	// Add attributes
@@ -216,8 +203,8 @@ func TestHandler_WithAttrs(t *testing.T) {
 
 func TestHandler_WithGroup(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	groupHandler := handler.WithGroup("mygroup")
@@ -240,9 +227,9 @@ func TestHandler_DelegateToUnderlyingHandler(t *testing.T) {
 		Level: slog.LevelInfo,
 	})
 
-	handler := NewHandler(logger, HandlerOptions{
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		Handler:      underlyingHandler,
-		KeyExtractor: AttrExtractor("entity"),
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	ctx := context.Background()
@@ -312,7 +299,7 @@ func TestDefaultActionExtractor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DefaultActionExtractor(tt.attrs)
+			got := auditslog.DefaultActionExtractor(tt.attrs)
 			if got != tt.want {
 				t.Errorf("DefaultActionExtractor() = %v, want %v", got, tt.want)
 			}
@@ -349,7 +336,7 @@ func TestDefaultAuthorExtractor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DefaultAuthorExtractor(context.Background(), tt.attrs)
+			got := auditslog.DefaultAuthorExtractor(context.Background(), tt.attrs)
 			if got != tt.want {
 				t.Errorf("DefaultAuthorExtractor() = %v, want %v", got, tt.want)
 			}
@@ -366,7 +353,7 @@ func TestDefaultPayloadExtractor(t *testing.T) {
 		slog.Int("age", 25),
 	}
 
-	payload := DefaultPayloadExtractor(attrs)
+	payload := auditslog.DefaultPayloadExtractor(attrs)
 
 	// Should not include reserved keys
 	if _, ok := payload["entity"]; ok {
@@ -389,7 +376,7 @@ func TestDefaultPayloadExtractor(t *testing.T) {
 }
 
 func TestAttrExtractor(t *testing.T) {
-	extractor := AttrExtractor("entity")
+	extractor := auditslog.AttrExtractor("entity")
 
 	attrs := []slog.Attr{
 		slog.String("entity", "user:123"),
@@ -418,8 +405,8 @@ func TestHandler_Enabled(t *testing.T) {
 	logger := audit.New()
 
 	// Handler without underlying handler
-	handler1 := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor("entity"),
+	handler1 := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 	if !handler1.Enabled(context.Background(), slog.LevelInfo) {
 		t.Error("Handler without underlying handler should always be enabled")
@@ -429,9 +416,9 @@ func TestHandler_Enabled(t *testing.T) {
 	underlyingHandler := slog.NewJSONHandler(&bytes.Buffer{}, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
 	})
-	handler2 := NewHandler(logger, HandlerOptions{
+	handler2 := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		Handler:      underlyingHandler,
-		KeyExtractor: AttrExtractor("entity"),
+		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	if handler2.Enabled(context.Background(), slog.LevelDebug) {
@@ -442,26 +429,10 @@ func TestHandler_Enabled(t *testing.T) {
 	}
 }
 
-func TestConstants(t *testing.T) {
-	// Test that constants have expected values
-	if AttrEntity != "entity" {
-		t.Errorf("AttrEntity = %q, want %q", AttrEntity, "entity")
-	}
-	if AttrAction != "action" {
-		t.Errorf("AttrAction = %q, want %q", AttrAction, "action")
-	}
-	if AttrAuthor != "author" {
-		t.Errorf("AttrAuthor = %q, want %q", AttrAuthor, "author")
-	}
-	if AttrUser != "user" {
-		t.Errorf("AttrUser = %q, want %q", AttrUser, "user")
-	}
-}
-
 func TestHandler_WithConstants(t *testing.T) {
 	logger := audit.New()
-	handler := NewHandler(logger, HandlerOptions{
-		KeyExtractor: AttrExtractor(AttrEntity),
+	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
+		KeyExtractor: auditslog.AttrExtractor(auditslog.AttrEntity),
 	})
 
 	ctx := context.Background()
@@ -469,9 +440,9 @@ func TestHandler_WithConstants(t *testing.T) {
 		Message: "Test with constants",
 	}
 	record.AddAttrs(
-		slog.String(AttrEntity, "user:123"),
-		slog.String(AttrAction, "create"),
-		slog.String(AttrAuthor, "admin"),
+		slog.String(auditslog.AttrEntity, "user:123"),
+		slog.String(auditslog.AttrAction, "create"),
+		slog.String(auditslog.AttrAuthor, "admin"),
 	)
 
 	err := handler.Handle(ctx, record)

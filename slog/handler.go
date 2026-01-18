@@ -14,19 +14,19 @@ import (
 // Use these constants when logging to ensure correct extraction.
 const (
 	// AttrEntity is the key for the entity identifier (required for audit).
-	// Example: slog.Info("...", slog.AttrEntity, "user:123")
+	// Example: slog.Info("...", slog.AttrEntity, "user:123").
 	AttrEntity = "entity"
 
 	// AttrAction is the key for the action type (create, update, delete).
-	// Example: slog.Info("...", slog.AttrAction, "update")
+	// Example: slog.Info("...", slog.AttrAction, "update").
 	AttrAction = "action"
 
 	// AttrAuthor is the key for the author/user who performed the action.
-	// Example: slog.Info("...", slog.AttrAuthor, "admin")
+	// Example: slog.Info("...", slog.AttrAuthor, "admin").
 	AttrAuthor = "author"
 
 	// AttrUser is an alternative key for the author (use either AttrAuthor or AttrUser).
-	// Example: slog.Info("...", slog.AttrUser, "john.doe")
+	// Example: slog.Info("...", slog.AttrUser, "john.doe").
 	AttrUser = "user"
 )
 
@@ -224,7 +224,7 @@ func DefaultAuthorExtractor(ctx context.Context, attrs []slog.Attr) string {
 }
 
 // DefaultPayloadExtractor includes all attributes except reserved keys.
-// Reserved keys: AttrEntity, AttrAction, AttrAuthor, AttrUser
+// Reserved keys: AttrEntity, AttrAction, AttrAuthor, AttrUser.
 func DefaultPayloadExtractor(attrs []slog.Attr) map[string]audit.Value {
 	payload := make(map[string]audit.Value)
 	reservedKeys := map[string]bool{
