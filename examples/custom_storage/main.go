@@ -90,10 +90,10 @@ func main() {
 	fmt.Println("======================")
 	fmt.Println()
 
-	// Create logger with custom JSON file storage
+	// Create logger with custom JSON file storage using options pattern
 	filepath := "audit_events.json"
 	storage := NewJSONFileStorage(filepath)
-	logger := audit.NewWithStorage(storage)
+	logger := audit.New(audit.WithStorage(storage))
 
 	fmt.Printf("Using JSON file storage: %s\n\n", filepath)
 
