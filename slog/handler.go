@@ -10,6 +10,26 @@ import (
 	"github.com/w0rng/audit"
 )
 
+// Attribute keys used for audit logging.
+// Use these constants when logging to ensure correct extraction.
+const (
+	// AttrEntity is the key for the entity identifier (required for audit).
+	// Example: slog.Info("...", slog.AttrEntity, "user:123")
+	AttrEntity = "entity"
+
+	// AttrAction is the key for the action type (create, update, delete).
+	// Example: slog.Info("...", slog.AttrAction, "update")
+	AttrAction = "action"
+
+	// AttrAuthor is the key for the author/user who performed the action.
+	// Example: slog.Info("...", slog.AttrAuthor, "admin")
+	AttrAuthor = "author"
+
+	// AttrUser is an alternative key for the author (use either AttrAuthor or AttrUser).
+	// Example: slog.Info("...", slog.AttrUser, "john.doe")
+	AttrUser = "user"
+)
+
 // Handler is a slog.Handler that writes audit logs based on slog records.
 // It delegates to another handler for normal logging while optionally
 // sending matching records to an audit logger.
@@ -172,11 +192,11 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return &newHandler
 }
 
-// DefaultActionExtractor extracts action from "action" attribute.
+// DefaultActionExtractor extracts action from AttrAction attribute.
 // Defaults to ActionCreate if not found.
 func DefaultActionExtractor(attrs []slog.Attr) audit.Action {
 	for _, attr := range attrs {
-		if attr.Key == "action" {
+		if attr.Key == AttrAction {
 			switch attr.Value.String() {
 			case "create":
 				return audit.ActionCreate
@@ -192,11 +212,11 @@ func DefaultActionExtractor(attrs []slog.Attr) audit.Action {
 	return audit.ActionCreate
 }
 
-// DefaultAuthorExtractor extracts author from "author" or "user" attribute.
+// DefaultAuthorExtractor extracts author from AttrAuthor or AttrUser attribute.
 // Defaults to "system" if not found.
 func DefaultAuthorExtractor(ctx context.Context, attrs []slog.Attr) string {
 	for _, attr := range attrs {
-		if attr.Key == "author" || attr.Key == "user" {
+		if attr.Key == AttrAuthor || attr.Key == AttrUser {
 			return attr.Value.String()
 		}
 	}
@@ -204,14 +224,14 @@ func DefaultAuthorExtractor(ctx context.Context, attrs []slog.Attr) string {
 }
 
 // DefaultPayloadExtractor includes all attributes except reserved keys.
-// Reserved keys: entity, action, author, user
+// Reserved keys: AttrEntity, AttrAction, AttrAuthor, AttrUser
 func DefaultPayloadExtractor(attrs []slog.Attr) map[string]audit.Value {
 	payload := make(map[string]audit.Value)
 	reservedKeys := map[string]bool{
-		"entity": true,
-		"action": true,
-		"author": true,
-		"user":   true,
+		AttrEntity: true,
+		AttrAction: true,
+		AttrAuthor: true,
+		AttrUser:   true,
 	}
 
 	for _, attr := range attrs {

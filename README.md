@@ -115,7 +115,7 @@ Automatically create audit logs from standard `slog` logs:
 import auditslog "github.com/w0rng/audit/slog"
 
 handler := auditslog.NewHandler(auditLogger, auditslog.HandlerOptions{
-    KeyExtractor: auditslog.AttrExtractor("entity"),
+    KeyExtractor: auditslog.AttrExtractor(auditslog.AttrEntity),
     ShouldAudit: func(r slog.Record) bool {
         return r.Level >= slog.LevelInfo
     },
@@ -123,11 +123,13 @@ handler := auditslog.NewHandler(auditLogger, auditslog.HandlerOptions{
 
 logger := slog.New(handler)
 logger.Info("User created",
-    "entity", "user:123",
-    "action", "create",
+    auditslog.AttrEntity, "user:123",
+    auditslog.AttrAction, "create",
     "email", "user@example.com",
 )
 ```
+
+Available attribute constants: `AttrEntity`, `AttrAction`, `AttrAuthor`, `AttrUser`.
 
 See [examples/slog_integration](./examples/slog_integration) for complete example.
 

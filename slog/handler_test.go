@@ -441,3 +441,52 @@ func TestHandler_Enabled(t *testing.T) {
 		t.Error("Handler should delegate Enabled to underlying handler")
 	}
 }
+
+func TestConstants(t *testing.T) {
+	// Test that constants have expected values
+	if AttrEntity != "entity" {
+		t.Errorf("AttrEntity = %q, want %q", AttrEntity, "entity")
+	}
+	if AttrAction != "action" {
+		t.Errorf("AttrAction = %q, want %q", AttrAction, "action")
+	}
+	if AttrAuthor != "author" {
+		t.Errorf("AttrAuthor = %q, want %q", AttrAuthor, "author")
+	}
+	if AttrUser != "user" {
+		t.Errorf("AttrUser = %q, want %q", AttrUser, "user")
+	}
+}
+
+func TestHandler_WithConstants(t *testing.T) {
+	logger := audit.New()
+	handler := NewHandler(logger, HandlerOptions{
+		KeyExtractor: AttrExtractor(AttrEntity),
+	})
+
+	ctx := context.Background()
+	record := slog.Record{
+		Message: "Test with constants",
+	}
+	record.AddAttrs(
+		slog.String(AttrEntity, "user:123"),
+		slog.String(AttrAction, "create"),
+		slog.String(AttrAuthor, "admin"),
+	)
+
+	err := handler.Handle(ctx, record)
+	if err != nil {
+		t.Fatalf("Handle returned error: %v", err)
+	}
+
+	events := logger.Events("user:123")
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].Action != audit.ActionCreate {
+		t.Errorf("expected action Create, got %v", events[0].Action)
+	}
+	if events[0].Author != "admin" {
+		t.Errorf("expected author 'admin', got %q", events[0].Author)
+	}
+}

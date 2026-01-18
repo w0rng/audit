@@ -24,8 +24,8 @@ func main() {
 			Level: slog.LevelInfo,
 		}),
 
-		// Extract entity key from "entity" attribute
-		KeyExtractor: auditslog.AttrExtractor("entity"),
+		// Extract entity key from auditslog.AttrEntity attribute
+		KeyExtractor: auditslog.AttrExtractor(auditslog.AttrEntity),
 
 		// Only audit Info level and above
 		ShouldAudit: func(record slog.Record) bool {
@@ -42,24 +42,24 @@ func main() {
 
 	// Log user creation (will be audited)
 	slog.Info("User account created",
-		"entity", "user:123",
-		"action", "create",
-		"author", "admin",
+		auditslog.AttrEntity, "user:123",
+		auditslog.AttrAction, "create",
+		auditslog.AttrAuthor, "admin",
 		"email", "alice@example.com",
 		"role", "editor",
 	)
 
 	// Log user update (will be audited)
 	slog.Info("User role updated",
-		"entity", "user:123",
-		"action", "update",
-		"author", "admin",
+		auditslog.AttrEntity, "user:123",
+		auditslog.AttrAction, "update",
+		auditslog.AttrAuthor, "admin",
 		"role", "admin",
 	)
 
 	// Debug log (will NOT be audited due to ShouldAudit filter)
 	slog.Debug("Debug message",
-		"entity", "user:123",
+		auditslog.AttrEntity, "user:123",
 		"debug_info", "some details",
 	)
 
@@ -70,18 +70,18 @@ func main() {
 
 	// Order creation
 	slog.Info("Order created",
-		"entity", "order:456",
-		"action", "create",
-		"user", "alice", // can use "user" instead of "author"
+		auditslog.AttrEntity, "order:456",
+		auditslog.AttrAction, "create",
+		auditslog.AttrUser, "alice", // can use AttrUser instead of AttrAuthor
 		"total", 99.99,
 		"status", "pending",
 	)
 
 	// Order update
 	slog.Warn("Order payment failed",
-		"entity", "order:456",
-		"action", "update",
-		"author", "payment-system",
+		auditslog.AttrEntity, "order:456",
+		auditslog.AttrAction, "update",
+		auditslog.AttrAuthor, "payment-system",
 		"status", "failed",
 		"error", "insufficient funds",
 	)
