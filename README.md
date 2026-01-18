@@ -4,7 +4,7 @@ A lightweight, thread-safe audit logging library for Go that tracks entity chang
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/w0rng/audit.svg)](https://pkg.go.dev/github.com/w0rng/audit)
 [![Go Report Card](https://goreportcard.com/badge/github.com/w0rng/audit)](https://goreportcard.com/report/github.com/w0rng/audit)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Coverage Status](https://coveralls.io/repos/github/w0rng/audit/badge.svg?branch=main)](https://coveralls.io/github/w0rng/audit?branch=main)
 
 ## Features
 
