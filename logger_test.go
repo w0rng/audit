@@ -7,9 +7,12 @@ import (
 	"time"
 
 	"github.com/w0rng/audit"
+	"github.com/w0rng/audit/internal/be"
 )
 
 func TestLogger_Create(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		key         string
@@ -52,6 +55,8 @@ func TestLogger_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			logger := audit.New()
 			logger.Create(tt.key, tt.author, tt.description, tt.payload)
 
@@ -61,23 +66,16 @@ func TestLogger_Create(t *testing.T) {
 			}
 
 			event := events[0]
-			if event.Action != tt.wantAction {
-				t.Errorf("expected action %v, got %v", tt.wantAction, event.Action)
-			}
-			if event.Author != tt.author {
-				t.Errorf("expected author %q, got %q", tt.author, event.Author)
-			}
-			if event.Description != tt.description {
-				t.Errorf("expected description %q, got %q", tt.description, event.Description)
-			}
-			if len(event.Payload) != len(tt.payload) {
-				t.Errorf("expected payload length %d, got %d", len(tt.payload), len(event.Payload))
-			}
+			be.Equal(t, event.Action, tt.wantAction)
+			be.Equal(t, event.Author, tt.author)
+			be.Equal(t, event.Description, tt.description)
+			be.Equal(t, event.Payload, tt.payload)
 		})
 	}
 }
 
 func TestLogger_Update(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	logger.Create("order:1", "user", "Created", map[string]audit.Value{
 		"status": audit.PlainValue("pending"),
@@ -87,15 +85,12 @@ func TestLogger_Update(t *testing.T) {
 	})
 
 	events := logger.Events("order:1")
-	if len(events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(events))
-	}
-	if events[1].Action != audit.ActionUpdate {
-		t.Errorf("expected action %v, got %v", audit.ActionUpdate, events[1].Action)
-	}
+	be.Equal(t, len(events), 2)
+	be.Equal(t, events[1].Action, audit.ActionUpdate)
 }
 
 func TestLogger_Delete(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	logger.Create("item:1", "user", "Created", map[string]audit.Value{
 		"name": audit.PlainValue("test"),
@@ -103,15 +98,12 @@ func TestLogger_Delete(t *testing.T) {
 	logger.Delete("item:1", "admin", "Deleted", map[string]audit.Value{})
 
 	events := logger.Events("item:1")
-	if len(events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(events))
-	}
-	if events[1].Action != audit.ActionDelete {
-		t.Errorf("expected action %v, got %v", audit.ActionDelete, events[1].Action)
-	}
+	be.Equal(t, len(events), 2)
+	be.Equal(t, events[1].Action, audit.ActionDelete)
 }
 
 func TestLogger_Events_NoFilter(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	logger.Create("entity:1", "user", "Created", map[string]audit.Value{
 		"field1": audit.PlainValue("value1"),
@@ -122,12 +114,11 @@ func TestLogger_Events_NoFilter(t *testing.T) {
 	})
 
 	events := logger.Events("entity:1")
-	if len(events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(events))
-	}
+	be.Equal(t, len(events), 2)
 }
 
 func TestLogger_Events_Filtering(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	logger.Create("entity:1", "user", "Created", map[string]audit.Value{
 		"status": audit.PlainValue("new"),
@@ -201,10 +192,9 @@ func TestLogger_Events_Filtering(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			events := logger.Events("entity:1", tt.fields...)
-			if len(events) != tt.wantEvents {
-				t.Errorf("expected %d events, got %d", tt.wantEvents, len(events))
-			}
+			be.Equal(t, len(events), tt.wantEvents)
 			if tt.checkPayload != nil {
 				tt.checkPayload(t, events)
 			}
@@ -213,17 +203,14 @@ func TestLogger_Events_Filtering(t *testing.T) {
 }
 
 func TestLogger_Events_NonExistentKey(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	events := logger.Events("nonexistent")
-	if events == nil {
-		t.Error("Events() should not return nil")
-	}
-	if len(events) != 0 {
-		t.Errorf("expected 0 events, got %d", len(events))
-	}
+	be.Equal(t, len(events), 0)
 }
 
 func TestLogger_Logs(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 
 	logger.Create("item:1", "alice", "Created", map[string]audit.Value{
@@ -240,38 +227,24 @@ func TestLogger_Logs(t *testing.T) {
 	})
 
 	changes := logger.Logs("item:1")
-	if len(changes) != 3 {
-		t.Fatalf("expected 3 changes, got %d", len(changes))
-	}
+	be.Equal(t, len(changes), 3)
 
 	// Check first change (create)
-	if changes[0].Author != "alice" {
-		t.Errorf("expected author alice, got %s", changes[0].Author)
-	}
-	if len(changes[0].Fields) != 2 {
-		t.Fatalf("expected 2 field changes, got %d", len(changes[0].Fields))
-	}
+	be.Equal(t, changes[0].Author, "alice")
+	be.Equal(t, len(changes[0].Fields), 2)
 
 	// Check second change (color update)
-	if changes[1].Author != "bob" {
-		t.Errorf("expected author bob, got %s", changes[1].Author)
-	}
-	if len(changes[1].Fields) != 1 {
-		t.Fatalf("expected 1 field change, got %d", len(changes[1].Fields))
-	}
+	be.Equal(t, changes[1].Author, "bob")
+	be.Equal(t, len(changes[1].Fields), 1)
+
 	colorChange := changes[1].Fields[0]
-	if colorChange.Field != "color" {
-		t.Errorf("expected field 'color', got %s", colorChange.Field)
-	}
-	if colorChange.From != "red" {
-		t.Errorf("expected from 'red', got %v", colorChange.From)
-	}
-	if colorChange.To != "blue" {
-		t.Errorf("expected to 'blue', got %v", colorChange.To)
-	}
+	be.Equal(t, colorChange.Field, "color")
+	be.Equal(t, colorChange.From, "red")
+	be.Equal(t, colorChange.To, "blue")
 }
 
 func TestLogger_HiddenValues(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	const hideField = "password"
 
@@ -285,38 +258,25 @@ func TestLogger_HiddenValues(t *testing.T) {
 	})
 
 	changes := logger.Logs("user:1")
-	if len(changes) != 2 {
-		t.Fatalf("expected 2 changes, got %d", len(changes))
-	}
+	be.Equal(t, len(changes), 2)
 
 	// Check first change - password should be masked
 	passwordField := changes[0].Fields[1] // Assuming password is second field
 	if passwordField.Field == hideField {
-		if passwordField.From != audit.HideText {
-			t.Errorf("expected hidden from value '***', got %v", passwordField.From)
-		}
-		if passwordField.To != audit.HideText {
-			t.Errorf("expected hidden to value '***', got %v", passwordField.To)
-		}
+		be.Equal(t, passwordField.From.(string), audit.HideText)
+		be.Equal(t, passwordField.To.(string), audit.HideText)
 	}
 
 	// Check second change - password update should show *** -> ***
-	if len(changes[1].Fields) < 1 {
-		t.Fatal("expected at least 1 field change in second change")
-	}
+	be.True(t, len(changes[1].Fields) >= 1)
 	passwordUpdate := changes[1].Fields[0]
-	if passwordUpdate.Field != hideField {
-		t.Errorf("expected field 'password', got %s", passwordUpdate.Field)
-	}
-	if passwordUpdate.From != audit.HideText {
-		t.Errorf("expected hidden from value '***', got %v", passwordUpdate.From)
-	}
-	if passwordUpdate.To != audit.HideText {
-		t.Errorf("expected hidden to value '***', got %v", passwordUpdate.To)
-	}
+	be.Equal(t, passwordUpdate.Field, hideField)
+	be.Equal(t, passwordUpdate.From.(string), audit.HideText)
+	be.Equal(t, passwordUpdate.To.(string), audit.HideText)
 }
 
 func TestLogger_Concurrency(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	const goroutines = 100
 	const eventsPerGoroutine = 10
@@ -347,18 +307,15 @@ func TestLogger_Concurrency(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		events := logger.Events(fmt.Sprintf("key:%d", i))
 		totalEvents += len(events)
-		if len(events) != eventsPerGoroutine {
-			t.Errorf("key:%d expected %d events, got %d", i, eventsPerGoroutine, len(events))
-		}
+		be.Equal(t, len(events), eventsPerGoroutine)
 	}
 
 	expected := goroutines * eventsPerGoroutine
-	if totalEvents != expected {
-		t.Errorf("expected %d total events, got %d", expected, totalEvents)
-	}
+	be.Equal(t, totalEvents, expected)
 }
 
 func TestLogger_Concurrency_ReadWrite(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	const duration = 100 * time.Millisecond
 
@@ -393,49 +350,37 @@ func TestLogger_Concurrency_ReadWrite(t *testing.T) {
 
 	// Verify data integrity
 	events := logger.Events("shared-key")
-	if len(events) == 0 {
-		t.Error("expected some events to be recorded")
-	}
+	be.True(t, len(events) > 0)
 }
 
 func TestPlainValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
-		name       string
-		input      any
-		comparable bool
+		name  string
+		input any
 	}{
-		{"string", "test", true},
-		{"int", 42, true},
-		{"float", 3.14, true},
-		{"bool", true, true},
-		{"nil", nil, true},
-		{"map", map[string]string{"key": "value"}, false},
-		{"slice", []int{1, 2, 3}, false},
+		{"string", "test"},
+		{"int", 42},
+		{"float", 3.14},
+		{"bool", true},
+		{"nil", nil},
+		{"map", map[string]string{"key": "value"}},
+		{"slice", []int{1, 2, 3}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			v := audit.PlainValue(tt.input)
-			if v.Hidden {
-				t.Error("PlainValue should not be hidden")
-			}
-			if tt.comparable && v.Data != tt.input {
-				t.Errorf("expected data %v, got %v", tt.input, v.Data)
-			}
-			// For non-comparable types, just check that Data is not nil
-			if !tt.comparable && tt.input != nil && v.Data == nil {
-				t.Error("expected non-nil data for non-comparable type")
-			}
+			be.True(t, !v.Hidden)
+			be.Equal(t, v.Data, tt.input)
 		})
 	}
 }
 
 func TestHiddenValue(t *testing.T) {
+	t.Parallel()
 	v := audit.HiddenValue()
-	if !v.Hidden {
-		t.Error("HiddenValue should be hidden")
-	}
-	if v.Data != nil {
-		t.Errorf("expected nil data, got %v", v.Data)
-	}
+	be.True(t, v.Hidden)
+	be.Equal(t, v.Data, nil)
 }

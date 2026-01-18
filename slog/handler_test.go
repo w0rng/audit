@@ -2,19 +2,18 @@ package slog_test
 
 import (
 	"bytes"
-	"context"
 	"log/slog"
 	"testing"
 
 	"github.com/w0rng/audit"
+	"github.com/w0rng/audit/internal/be"
 	auditslog "github.com/w0rng/audit/slog"
 )
 
 func TestNewHandler_PanicsWithoutKeyExtractor(t *testing.T) {
+	t.Parallel()
 	defer func() {
-		if r := recover(); r == nil {
-			t.Error("NewHandler should panic when KeyExtractor is nil")
-		}
+		be.True(t, recover() != nil)
 	}()
 
 	logger := audit.New()
@@ -22,12 +21,12 @@ func TestNewHandler_PanicsWithoutKeyExtractor(t *testing.T) {
 }
 
 func TestHandler_Handle_Basic(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "User created",
 	}
@@ -36,36 +35,25 @@ func TestHandler_Handle_Basic(t *testing.T) {
 		slog.String("email", "test@example.com"),
 	)
 
-	err := handler.Handle(ctx, record)
-	if err != nil {
-		t.Fatalf("Handle returned error: %v", err)
-	}
+	be.Err(t, handler.Handle(t.Context(), record), nil)
 
 	// Check that event was logged
 	events := logger.Events("user:123")
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
+	be.Equal(t, len(events), 1)
 
 	event := events[0]
-	if event.Description != "User created" {
-		t.Errorf("expected description 'User created', got %q", event.Description)
-	}
-	if event.Author != "system" {
-		t.Errorf("expected author 'system', got %q", event.Author)
-	}
-	if event.Action != audit.ActionCreate {
-		t.Errorf("expected action Create, got %v", event.Action)
-	}
+	be.Equal(t, event.Description, "User created")
+	be.Equal(t, event.Author, "system")
+	be.Equal(t, event.Action, audit.ActionCreate)
 }
 
 func TestHandler_Handle_WithAction(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "User updated",
 	}
@@ -75,26 +63,21 @@ func TestHandler_Handle_WithAction(t *testing.T) {
 		slog.String("status", "active"),
 	)
 
-	handler.Handle(ctx, record)
+	be.Err(t, handler.Handle(t.Context(), record), nil)
 
 	events := logger.Events("user:123")
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
-
-	if events[0].Action != audit.ActionUpdate {
-		t.Errorf("expected action Update, got %v", events[0].Action)
-	}
+	be.Equal(t, len(events), 1)
+	be.Equal(t, events[0].Action, audit.ActionUpdate)
 }
 
 func TestHandler_Handle_WithAuthor(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 	const author = "admin"
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "User created",
 	}
@@ -103,15 +86,15 @@ func TestHandler_Handle_WithAuthor(t *testing.T) {
 		slog.String("author", author),
 	)
 
-	handler.Handle(ctx, record)
+	be.Err(t, handler.Handle(t.Context(), record), nil)
 
 	events := logger.Events("user:123")
-	if events[0].Author != author {
-		t.Errorf("expected author 'admin', got %q", events[0].Author)
-	}
+	be.Equal(t, len(events), 1)
+	be.Equal(t, events[0].Author, author)
 }
 
 func TestHandler_Handle_ShouldAudit(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
@@ -121,15 +104,13 @@ func TestHandler_Handle_ShouldAudit(t *testing.T) {
 		},
 	})
 
-	ctx := context.Background()
-
 	// Debug level - should not be audited
 	debugRecord := slog.Record{
 		Message: "Debug message",
 		Level:   slog.LevelDebug,
 	}
 	debugRecord.AddAttrs(slog.String("entity", "user:123"))
-	handler.Handle(ctx, debugRecord)
+	be.Err(t, handler.Handle(t.Context(), debugRecord), nil)
 
 	// Info level - should be audited
 	infoRecord := slog.Record{
@@ -137,45 +118,38 @@ func TestHandler_Handle_ShouldAudit(t *testing.T) {
 		Level:   slog.LevelInfo,
 	}
 	infoRecord.AddAttrs(slog.String("entity", "user:456"))
-	handler.Handle(ctx, infoRecord)
+	be.Err(t, handler.Handle(t.Context(), infoRecord), nil)
 
 	// Check results
 	debugEvents := logger.Events("user:123")
-	if len(debugEvents) != 0 {
-		t.Error("Debug record should not be audited")
-	}
+	be.Equal(t, len(debugEvents), 0)
 
 	infoEvents := logger.Events("user:456")
-	if len(infoEvents) != 1 {
-		t.Errorf("Info record should be audited, got %d events", len(infoEvents))
-	}
+	be.Equal(t, len(infoEvents), 1)
 }
 
 func TestHandler_Handle_NoEntityKey(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "Regular log without entity",
 	}
 	record.AddAttrs(slog.String("other", "value"))
 
-	err := handler.Handle(ctx, record)
-	if err != nil {
-		t.Errorf("Handle should not error when entity key not found: %v", err)
-	}
+	err := handler.Handle(t.Context(), record)
+	be.Err(t, err, nil)
 
 	// Should not create any audit events
 	events := logger.Events("nonexistent")
-	if len(events) != 0 {
-		t.Error("Should not create audit events without entity key")
-	}
+	be.Equal(t, len(events), 0)
 }
 
 func TestHandler_WithAttrs(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	baseHandler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
@@ -186,31 +160,27 @@ func TestHandler_WithAttrs(t *testing.T) {
 		slog.String("entity", "user:123"),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "User updated",
 	}
 	record.AddAttrs(slog.String("status", "active"))
 
-	handlerWithAttrs.Handle(ctx, record)
+	handlerWithAttrs.Handle(t.Context(), record)
 
 	// Check that entity from handler attrs was used
 	events := logger.Events("user:123")
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
+	be.Equal(t, len(events), 1)
 }
 
 func TestHandler_WithGroup(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
 	groupHandler := handler.WithGroup("mygroup")
-	if groupHandler == nil {
-		t.Fatal("WithGroup returned nil")
-	}
+	be.True(t, groupHandler != nil)
 
 	// Empty group should return same handler
 	sameHandler := handler.WithGroup("")
@@ -220,6 +190,7 @@ func TestHandler_WithGroup(t *testing.T) {
 }
 
 func TestHandler_DelegateToUnderlyingHandler(t *testing.T) {
+	t.Parallel()
 	logger := audit.New()
 	var buf bytes.Buffer
 
@@ -232,31 +203,26 @@ func TestHandler_DelegateToUnderlyingHandler(t *testing.T) {
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "Test message",
 		Level:   slog.LevelInfo,
 	}
 	record.AddAttrs(slog.String("entity", "user:123"))
 
-	err := handler.Handle(ctx, record)
-	if err != nil {
-		t.Fatalf("Handle returned error: %v", err)
-	}
+	err := handler.Handle(t.Context(), record)
+	be.Err(t, err, nil)
 
 	// Check that underlying handler received the log
-	if buf.Len() == 0 {
-		t.Error("Underlying handler should have received the log")
-	}
+	be.True(t, buf.Len() > 0)
 
 	// Check that audit also received it
 	events := logger.Events("user:123")
-	if len(events) != 1 {
-		t.Error("Audit should also have received the log")
-	}
+	be.Equal(t, len(events), 1)
 }
 
 func TestDefaultActionExtractor(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		attrs []slog.Attr
@@ -299,15 +265,17 @@ func TestDefaultActionExtractor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := auditslog.DefaultActionExtractor(tt.attrs)
-			if got != tt.want {
-				t.Errorf("DefaultActionExtractor() = %v, want %v", got, tt.want)
-			}
+			be.Equal(t, got, tt.want)
 		})
 	}
 }
 
 func TestDefaultAuthorExtractor(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		attrs []slog.Attr
@@ -336,15 +304,16 @@ func TestDefaultAuthorExtractor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := auditslog.DefaultAuthorExtractor(context.Background(), tt.attrs)
-			if got != tt.want {
-				t.Errorf("DefaultAuthorExtractor() = %v, want %v", got, tt.want)
-			}
+			t.Parallel()
+			got := auditslog.DefaultAuthorExtractor(t.Context(), tt.attrs)
+			be.Equal(t, got, tt.want)
 		})
 	}
 }
 
 func TestDefaultPayloadExtractor(t *testing.T) {
+	t.Parallel()
+
 	attrs := []slog.Attr{
 		slog.String("entity", "user:123"), // should be filtered
 		slog.String("action", "create"),   // should be filtered
@@ -376,6 +345,8 @@ func TestDefaultPayloadExtractor(t *testing.T) {
 }
 
 func TestAttrExtractor(t *testing.T) {
+	t.Parallel()
+
 	extractor := auditslog.AttrExtractor("entity")
 
 	attrs := []slog.Attr{
@@ -384,33 +355,27 @@ func TestAttrExtractor(t *testing.T) {
 	}
 
 	key, found := extractor(attrs)
-	if !found {
-		t.Error("AttrExtractor should find the attribute")
-	}
-	if key != "user:123" {
-		t.Errorf("expected key 'user:123', got %q", key)
-	}
+	be.True(t, found)
+	be.Equal(t, key, "user:123")
 
 	// Test not found
 	attrs2 := []slog.Attr{
 		slog.String("other", "value"),
 	}
 	_, found = extractor(attrs2)
-	if found {
-		t.Error("AttrExtractor should not find missing attribute")
-	}
+	be.True(t, !found)
 }
 
 func TestHandler_Enabled(t *testing.T) {
+	t.Parallel()
+
 	logger := audit.New()
 
 	// Handler without underlying handler
 	handler1 := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
-	if !handler1.Enabled(context.Background(), slog.LevelInfo) {
-		t.Error("Handler without underlying handler should always be enabled")
-	}
+	be.True(t, handler1.Enabled(t.Context(), slog.LevelInfo))
 
 	// Handler with underlying handler
 	underlyingHandler := slog.NewJSONHandler(&bytes.Buffer{}, &slog.HandlerOptions{
@@ -421,21 +386,18 @@ func TestHandler_Enabled(t *testing.T) {
 		KeyExtractor: auditslog.AttrExtractor("entity"),
 	})
 
-	if handler2.Enabled(context.Background(), slog.LevelDebug) {
-		t.Error("Handler should delegate Enabled to underlying handler")
-	}
-	if !handler2.Enabled(context.Background(), slog.LevelWarn) {
-		t.Error("Handler should delegate Enabled to underlying handler")
-	}
+	be.True(t, !handler2.Enabled(t.Context(), slog.LevelInfo))
+	be.True(t, handler2.Enabled(t.Context(), slog.LevelWarn))
 }
 
 func TestHandler_WithConstants(t *testing.T) {
+	t.Parallel()
+
 	logger := audit.New()
 	handler := auditslog.NewHandler(logger, auditslog.HandlerOptions{
 		KeyExtractor: auditslog.AttrExtractor(auditslog.AttrEntity),
 	})
 
-	ctx := context.Background()
 	record := slog.Record{
 		Message: "Test with constants",
 	}
@@ -445,19 +407,11 @@ func TestHandler_WithConstants(t *testing.T) {
 		slog.String(auditslog.AttrAuthor, "admin"),
 	)
 
-	err := handler.Handle(ctx, record)
-	if err != nil {
-		t.Fatalf("Handle returned error: %v", err)
-	}
+	err := handler.Handle(t.Context(), record)
+	be.Err(t, err, nil)
 
 	events := logger.Events("user:123")
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
-	if events[0].Action != audit.ActionCreate {
-		t.Errorf("expected action Create, got %v", events[0].Action)
-	}
-	if events[0].Author != "admin" {
-		t.Errorf("expected author 'admin', got %q", events[0].Author)
-	}
+	be.Equal(t, len(events), 1)
+	be.Equal(t, events[0].Action, audit.ActionCreate)
+	be.Equal(t, events[0].Author, "admin")
 }

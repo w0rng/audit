@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/w0rng/audit"
+	"github.com/w0rng/audit/internal/be"
 )
 
 func TestInMemoryStorage_Store(t *testing.T) {
+	t.Parallel()
 	storage := audit.NewInMemoryStorage()
 	event := audit.Event{
 		Timestamp:   time.Now(),
@@ -24,15 +26,12 @@ func TestInMemoryStorage_Store(t *testing.T) {
 	storage.Store("key1", event)
 	events := storage.Get("key1")
 
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
-	if events[0].Author != "test" {
-		t.Errorf("expected author 'test', got %s", events[0].Author)
-	}
+	be.Equal(t, len(events), 1)
+	be.Equal(t, events[0].Author, "test")
 }
 
 func TestInMemoryStorage_Store_MultipleEvents(t *testing.T) {
+	t.Parallel()
 	storage := audit.NewInMemoryStorage()
 
 	for i := 0; i < 5; i++ {
@@ -47,12 +46,12 @@ func TestInMemoryStorage_Store_MultipleEvents(t *testing.T) {
 	}
 
 	events := storage.Get("key1")
-	if len(events) != 5 {
-		t.Fatalf("expected 5 events, got %d", len(events))
-	}
+	be.Equal(t, len(events), 5)
 }
 
 func TestInMemoryStorage_Get(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	event := audit.Event{
 		Timestamp:   time.Now(),
@@ -75,18 +74,17 @@ func TestInMemoryStorage_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			events := storage.Get(tt.key)
-			if events == nil {
-				t.Fatal("Get() returned nil")
-			}
-			if len(events) != tt.wantEvents {
-				t.Errorf("expected %d events, got %d", tt.wantEvents, len(events))
-			}
+			be.Equal(t, len(events), tt.wantEvents)
 		})
 	}
 }
 
 func TestInMemoryStorage_Has(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	event := audit.Event{
 		Timestamp:   time.Now(),
@@ -110,14 +108,16 @@ func TestInMemoryStorage_Has(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := storage.Has(tt.key); got != tt.want {
-				t.Errorf("Has(%q) = %v, want %v", tt.key, got, tt.want)
-			}
+			t.Parallel()
+
+			be.Equal(t, storage.Has(tt.key), tt.want)
 		})
 	}
 }
 
 func TestInMemoryStorage_Clear(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	event := audit.Event{
 		Timestamp:   time.Now(),
@@ -136,21 +136,21 @@ func TestInMemoryStorage_Clear(t *testing.T) {
 
 	storage.Clear("key1")
 
-	if storage.Has("key1") {
-		t.Error("key1 should not exist after Clear")
-	}
-	if !storage.Has("key2") {
-		t.Error("key2 should still exist after clearing key1")
-	}
+	be.True(t, !storage.Has("key1"))
+	be.True(t, storage.Has("key2"))
 }
 
 func TestInMemoryStorage_Clear_NonExistent(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	// Should not panic when clearing non-existent key
 	storage.Clear("nonexistent")
 }
 
 func TestInMemoryStorage_Concurrency(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	const goroutines = 100
 	const eventsPerGoroutine = 10
@@ -183,18 +183,16 @@ func TestInMemoryStorage_Concurrency(t *testing.T) {
 	for i := 0; i < goroutines; i++ {
 		events := storage.Get(fmt.Sprintf("key:%d", i))
 		totalEvents += len(events)
-		if len(events) != eventsPerGoroutine {
-			t.Errorf("key:%d expected %d events, got %d", i, eventsPerGoroutine, len(events))
-		}
+		be.Equal(t, len(events), eventsPerGoroutine)
 	}
 
 	expected := goroutines * eventsPerGoroutine
-	if totalEvents != expected {
-		t.Errorf("expected %d total events, got %d", expected, totalEvents)
-	}
+	be.Equal(t, totalEvents, expected)
 }
 
 func TestInMemoryStorage_Concurrency_ReadWrite(t *testing.T) {
+	t.Parallel()
+
 	storage := audit.NewInMemoryStorage()
 	const duration = 100 * time.Millisecond
 
@@ -246,9 +244,7 @@ func TestInMemoryStorage_Concurrency_ReadWrite(t *testing.T) {
 
 	// Verify data integrity
 	events := storage.Get("shared-key")
-	if len(events) == 0 {
-		t.Error("expected some events to be stored")
-	}
+	be.True(t, len(events) > 0)
 }
 
 func TestStorageInterface(t *testing.T) {
@@ -300,6 +296,8 @@ func (m *mockStorage) Clear(key string) {
 }
 
 func TestLogger_WithMockStorage(t *testing.T) {
+	t.Parallel()
+
 	mock := newMockStorage()
 	logger := audit.New(audit.WithStorage(mock))
 
@@ -307,16 +305,9 @@ func TestLogger_WithMockStorage(t *testing.T) {
 		"field": audit.PlainValue("value"),
 	})
 
-	if mock.calls["Store"] != 1 {
-		t.Errorf("expected 1 Store call, got %d", mock.calls["Store"])
-	}
+	be.Equal(t, mock.calls["Store"], 1)
 
 	events := logger.Events("test")
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
-
-	if mock.calls["Get"] != 1 {
-		t.Errorf("expected 1 Get call, got %d", mock.calls["Get"])
-	}
+	be.Equal(t, len(events), 1)
+	be.Equal(t, mock.calls["Get"], 1)
 }
