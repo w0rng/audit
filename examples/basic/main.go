@@ -68,7 +68,7 @@ func main() {
 			change.Timestamp.Format("2006-01-02 15:04:05"),
 		)
 		for _, field := range change.Fields {
-			fmt.Printf("   %s: %v → %v\n", field.Field, field.From, field.To)
+			fmt.Printf("   %s: %v -> %v\n", field.Field, field.From, field.To)
 		}
 	}
 
@@ -82,7 +82,7 @@ func main() {
 			statuses = append(statuses, fmt.Sprintf("%v", value.Data))
 		}
 	}
-	fmt.Printf("Status progression: %s\n", strings.Join(statuses, " → "))
+	fmt.Printf("Status progression: %s\n", strings.Join(statuses, " -> "))
 
 	// Display events with multiple field filters
 	fmt.Println("\n\nStatus and Tracking Events:")

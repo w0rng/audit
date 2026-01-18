@@ -97,7 +97,7 @@ func main() {
 	for i, change := range userChanges {
 		fmt.Printf("%d. %s (by %s)\n", i+1, change.Description, change.Author)
 		for _, field := range change.Fields {
-			fmt.Printf("   %s: %v → %v\n", field.Field, field.From, field.To)
+			fmt.Printf("   %s: %v -> %v\n", field.Field, field.From, field.To)
 		}
 	}
 
@@ -109,7 +109,7 @@ func main() {
 	for i, change := range orderChanges {
 		fmt.Printf("%d. %s (by %s)\n", i+1, change.Description, change.Author)
 		for _, field := range change.Fields {
-			fmt.Printf("   %s: %v → %v\n", field.Field, field.From, field.To)
+			fmt.Printf("   %s: %v -> %v\n", field.Field, field.From, field.To)
 		}
 	}
 

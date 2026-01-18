@@ -131,7 +131,7 @@ func main() {
 	for _, change := range changes {
 		fmt.Printf("- %s\n", change.Description)
 		for _, field := range change.Fields {
-			fmt.Printf("  %s: %v → %v\n", field.Field, field.From, field.To)
+			fmt.Printf("  %s: %v -> %v\n", field.Field, field.From, field.To)
 		}
 	}
 
