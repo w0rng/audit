@@ -28,6 +28,46 @@ func TestNewWithStorage(t *testing.T) {
 	}
 }
 
+func TestNew_WithOptions(t *testing.T) {
+	storage := NewInMemoryStorage()
+	logger := New(WithStorage(storage))
+	if logger == nil {
+		t.Fatal("New(WithStorage()) returned nil")
+	}
+	if logger.storage != storage {
+		t.Error("Logger storage does not match provided storage")
+	}
+}
+
+func TestNew_DefaultStorage(t *testing.T) {
+	logger := New()
+	if logger == nil {
+		t.Fatal("New() returned nil")
+	}
+	if logger.storage == nil {
+		t.Fatal("Logger storage is nil")
+	}
+	// Should be InMemoryStorage by default
+	if _, ok := logger.storage.(*InMemoryStorage); !ok {
+		t.Error("Default storage should be InMemoryStorage")
+	}
+}
+
+func TestWithStorage_Option(t *testing.T) {
+	customStorage := NewInMemoryStorage()
+	opt := WithStorage(customStorage)
+
+	logger := &Logger{
+		storage: NewInMemoryStorage(),
+	}
+
+	opt(logger)
+
+	if logger.storage != customStorage {
+		t.Error("WithStorage option did not set storage correctly")
+	}
+}
+
 func TestLogger_Create(t *testing.T) {
 	tests := []struct {
 		name        string

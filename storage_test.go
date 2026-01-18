@@ -309,7 +309,7 @@ func (m *mockStorage) Clear(key string) {
 
 func TestLogger_WithMockStorage(t *testing.T) {
 	mock := newMockStorage()
-	logger := NewWithStorage(mock)
+	logger := New(WithStorage(mock))
 
 	logger.Create("test", "user", "Created", map[string]Value{
 		"field": PlainValue("value"),

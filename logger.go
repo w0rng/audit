@@ -62,17 +62,40 @@ type Logger struct {
 	storage Storage
 }
 
-// New creates a new Logger with in-memory storage.
-func New() *Logger {
-	return NewWithStorage(NewInMemoryStorage())
+// Option is a function that configures a Logger.
+type Option func(*Logger)
+
+// WithStorage sets a custom storage implementation for the logger.
+// If not specified, NewInMemoryStorage() is used by default.
+func WithStorage(storage Storage) Option {
+	return func(l *Logger) {
+		l.storage = storage
+	}
+}
+
+// New creates a new Logger with the given options.
+// If no options are provided, it uses in-memory storage by default.
+//
+// Example:
+//
+//	logger := audit.New() // uses in-memory storage
+//	logger := audit.New(audit.WithStorage(customStorage)) // uses custom storage
+func New(opts ...Option) *Logger {
+	l := &Logger{
+		storage: NewInMemoryStorage(), // default storage
+	}
+
+	for _, opt := range opts {
+		opt(l)
+	}
+
+	return l
 }
 
 // NewWithStorage creates a Logger with a custom storage implementation.
-// This allows users to implement their own storage backends (e.g., Redis, database).
+// Deprecated: Use New(WithStorage(storage)) instead.
 func NewWithStorage(storage Storage) *Logger {
-	return &Logger{
-		storage: storage,
-	}
+	return New(WithStorage(storage))
 }
 
 // HiddenValue creates a Value with Hidden=true to mask sensitive data in logs.

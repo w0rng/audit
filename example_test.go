@@ -151,8 +151,8 @@ func ExampleNewWithStorage() {
 	// Create a custom storage implementation
 	storage := audit.NewInMemoryStorage()
 
-	// Create logger with custom storage
-	logger := audit.NewWithStorage(storage)
+	// Create logger with custom storage using options pattern
+	logger := audit.New(audit.WithStorage(storage))
 
 	logger.Create("test:1", "user", "Test event", map[string]audit.Value{
 		"field": audit.PlainValue("value"),
@@ -161,6 +161,22 @@ func ExampleNewWithStorage() {
 	events := logger.Events("test:1")
 	fmt.Printf("Events: %d\n", len(events))
 	// Output: Events: 1
+}
+
+func ExampleWithStorage() {
+	// Create a custom storage implementation
+	customStorage := audit.NewInMemoryStorage()
+
+	// Use WithStorage option to configure logger
+	logger := audit.New(audit.WithStorage(customStorage))
+
+	logger.Create("order:1", "user", "Order created", map[string]audit.Value{
+		"status": audit.PlainValue("pending"),
+	})
+
+	events := logger.Events("order:1")
+	fmt.Printf("Logged %d event(s) with custom storage\n", len(events))
+	// Output: Logged 1 event(s) with custom storage
 }
 
 func ExampleLogger_Events_multipleFields() {
