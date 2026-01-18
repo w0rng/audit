@@ -57,6 +57,7 @@ linters:
     - unused
     - wastedassign
     - whitespace
+    - modernize
   settings:
     cyclop:
       max-complexity: 25

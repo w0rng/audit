@@ -284,10 +284,10 @@ func TestLogger_Concurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < eventsPerGoroutine; j++ {
+			for j := range eventsPerGoroutine {
 				logger.Create(
 					fmt.Sprintf("key:%d", id),
 					fmt.Sprintf("user:%d", id),
@@ -304,7 +304,7 @@ func TestLogger_Concurrency(t *testing.T) {
 
 	// Verify all events were recorded
 	totalEvents := 0
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		events := logger.Events(fmt.Sprintf("key:%d", i))
 		totalEvents += len(events)
 		be.Equal(t, len(events), eventsPerGoroutine)

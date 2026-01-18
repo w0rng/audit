@@ -34,7 +34,7 @@ func TestInMemoryStorage_Store_MultipleEvents(t *testing.T) {
 	t.Parallel()
 	storage := audit.NewInMemoryStorage()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		event := audit.Event{
 			Timestamp:   time.Now(),
 			Action:      audit.ActionCreate,
@@ -158,10 +158,10 @@ func TestInMemoryStorage_Concurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < eventsPerGoroutine; j++ {
+			for j := range eventsPerGoroutine {
 				event := audit.Event{
 					Timestamp:   time.Now(),
 					Action:      audit.ActionCreate,
@@ -180,7 +180,7 @@ func TestInMemoryStorage_Concurrency(t *testing.T) {
 
 	// Verify all events were stored
 	totalEvents := 0
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		events := storage.Get(fmt.Sprintf("key:%d", i))
 		totalEvents += len(events)
 		be.Equal(t, len(events), eventsPerGoroutine)

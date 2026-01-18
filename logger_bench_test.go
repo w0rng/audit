@@ -15,8 +15,7 @@ func BenchmarkLogger_Create(b *testing.B) {
 		"field3": audit.PlainValue(123),
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Create("key", "author", "description", payload)
 	}
 }
@@ -27,8 +26,7 @@ func BenchmarkLogger_Update(b *testing.B) {
 		"status": audit.PlainValue("updated"),
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Update("key", "author", "description", payload)
 	}
 }
@@ -36,14 +34,13 @@ func BenchmarkLogger_Update(b *testing.B) {
 func BenchmarkLogger_Events_NoFilter(b *testing.B) {
 	logger := audit.New()
 	// Populate with 100 events
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		logger.Create("key", "author", "desc", map[string]audit.Value{
 			"field": audit.PlainValue(i),
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = logger.Events("key")
 	}
 }
@@ -51,7 +48,7 @@ func BenchmarkLogger_Events_NoFilter(b *testing.B) {
 func BenchmarkLogger_Events_WithFilter(b *testing.B) {
 	logger := audit.New()
 	// Populate with 100 events
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		logger.Create("key", "author", "desc", map[string]audit.Value{
 			"field1": audit.PlainValue(i),
 			"field2": audit.PlainValue(i * 2),
@@ -59,8 +56,7 @@ func BenchmarkLogger_Events_WithFilter(b *testing.B) {
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = logger.Events("key", "field1")
 	}
 }
@@ -68,7 +64,7 @@ func BenchmarkLogger_Events_WithFilter(b *testing.B) {
 func BenchmarkLogger_Events_MultipleFilters(b *testing.B) {
 	logger := audit.New()
 	// Populate with 100 events
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		logger.Create("key", "author", "desc", map[string]audit.Value{
 			"field1": audit.PlainValue(i),
 			"field2": audit.PlainValue(i * 2),
@@ -77,8 +73,7 @@ func BenchmarkLogger_Events_MultipleFilters(b *testing.B) {
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = logger.Events("key", "field1", "field3")
 	}
 }
@@ -86,15 +81,14 @@ func BenchmarkLogger_Events_MultipleFilters(b *testing.B) {
 func BenchmarkLogger_Logs(b *testing.B) {
 	logger := audit.New()
 	// Populate with 50 events
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		logger.Create("key", "author", "desc", map[string]audit.Value{
 			"field1": audit.PlainValue(i),
 			"field2": audit.PlainValue(i * 2),
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = logger.Logs("key")
 	}
 }
@@ -102,8 +96,7 @@ func BenchmarkLogger_Logs(b *testing.B) {
 func BenchmarkLogger_HiddenValue(b *testing.B) {
 	logger := audit.New()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Create("key", "author", "desc", map[string]audit.Value{
 			"password": audit.HiddenValue(),
 		})
@@ -111,15 +104,13 @@ func BenchmarkLogger_HiddenValue(b *testing.B) {
 }
 
 func BenchmarkPlainValue(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = audit.PlainValue("test")
 	}
 }
 
 func BenchmarkHiddenValue(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = audit.HiddenValue()
 	}
 }
@@ -135,8 +126,7 @@ func BenchmarkInMemoryStorage_Store(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		storage.Store("key", event)
 	}
 }
@@ -153,12 +143,11 @@ func BenchmarkInMemoryStorage_Get(b *testing.B) {
 	}
 
 	// Populate with 100 events
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		storage.Store("key", event)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = storage.Get("key")
 	}
 }
@@ -173,8 +162,7 @@ func BenchmarkInMemoryStorage_Has(b *testing.B) {
 	}
 	storage.Store("key", event)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = storage.Has("key")
 	}
 }
@@ -186,8 +174,7 @@ func BenchmarkLogger_Create_SmallPayload(b *testing.B) {
 		"field": audit.PlainValue("value"),
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Create("key", "author", "desc", payload)
 	}
 }
@@ -207,8 +194,7 @@ func BenchmarkLogger_Create_MediumPayload(b *testing.B) {
 		"field10": audit.PlainValue("value10"),
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Create("key", "author", "desc", payload)
 	}
 }
@@ -216,12 +202,11 @@ func BenchmarkLogger_Create_MediumPayload(b *testing.B) {
 func BenchmarkLogger_Create_LargePayload(b *testing.B) {
 	logger := audit.New()
 	payload := make(map[string]audit.Value)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		payload[fmt.Sprintf("field%d", i)] = audit.PlainValue(fmt.Sprintf("value%d", i))
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		logger.Create("key", "author", "desc", payload)
 	}
 }
@@ -229,17 +214,16 @@ func BenchmarkLogger_Create_LargePayload(b *testing.B) {
 // Benchmark with different numbers of keys.
 func BenchmarkLogger_Events_10Keys(b *testing.B) {
 	logger := audit.New()
-	for i := 0; i < 10; i++ {
-		for j := 0; j < 10; j++ {
+	for i := range 10 {
+		for j := range 10 {
 			logger.Create(fmt.Sprintf("key%d", i), "author", "desc", map[string]audit.Value{
 				"field": audit.PlainValue(j),
 			})
 		}
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 10; j++ {
+	for b.Loop() {
+		for j := range 10 {
 			_ = logger.Events(fmt.Sprintf("key%d", j))
 		}
 	}
@@ -247,17 +231,16 @@ func BenchmarkLogger_Events_10Keys(b *testing.B) {
 
 func BenchmarkLogger_Events_100Keys(b *testing.B) {
 	logger := audit.New()
-	for i := 0; i < 100; i++ {
-		for j := 0; j < 10; j++ {
+	for i := range 100 {
+		for j := range 10 {
 			logger.Create(fmt.Sprintf("key%d", i), "author", "desc", map[string]audit.Value{
 				"field": audit.PlainValue(j),
 			})
 		}
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < 100; j++ {
+	for b.Loop() {
+		for j := range 100 {
 			_ = logger.Events(fmt.Sprintf("key%d", j))
 		}
 	}
